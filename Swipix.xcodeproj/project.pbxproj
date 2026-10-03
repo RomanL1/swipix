@@ -1,0 +1,451 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		035830AC1BECCC96183385F9 /* Swipix/CompressionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D579497BB144D00153D09BD /* Swipix/CompressionView.swift */; };
+		04200CFFD12D083534B07BB1 /* Swipix/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3685E330EC5277A9DD5661C6 /* Swipix/Assets.xcassets */; };
+		07B760A8663938679E1BD8F1 /* Swipix/PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 96ED5C5789B174A01557791C /* Swipix/PrivacyInfo.xcprivacy */; };
+		46FDE337106B1340F3D3C10F /* SwipixUITests/SwipixUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B31B4C728776FB86AD04A2 /* SwipixUITests/SwipixUITests.swift */; };
+		702EE914005EB2ADB5D97C40 /* SwipixTests/SwipixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D26C239F1E25861753FF749 /* SwipixTests/SwipixTests.swift */; };
+		7B90AD1659B558EEFBDE1732 /* Swipix/Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29046B5F7AA439D7E19CC06B /* Swipix/Views.swift */; };
+		80450130C55606DA7620A088 /* Swipix/ImageCompressionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AE6E7F7D4171A45DA1617BC /* Swipix/ImageCompressionService.swift */; };
+		B80C9F230E0AA501A53962FB /* Swipix/AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 268C7D0CD7711E6A9394E8A3 /* Swipix/AppModel.swift */; };
+		B91D0C269C8B9E98A0E319AF /* Swipix/PhotoLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC6AF1ED9096715E3E6B3F96 /* Swipix/PhotoLibraryService.swift */; };
+		D88ED4A8C750CA8BAA2BC556 /* Swipix/ReviewState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FBEA440C1010E9DBFE0FC70 /* Swipix/ReviewState.swift */; };
+		F8DD70231A486AED154C9753 /* Swipix/FullscreenPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB10CCF35CEC8BA2851FFDDB /* Swipix/FullscreenPreview.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D799BAE6088A90139B415FCC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7D1043473D55BFA90E8530D3;
+			remoteInfo = Swipix;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1D579497BB144D00153D09BD /* Swipix/CompressionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swipix/CompressionView.swift; sourceTree = "<group>"; };
+		268C7D0CD7711E6A9394E8A3 /* Swipix/AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swipix/AppModel.swift; sourceTree = "<group>"; };
+		29046B5F7AA439D7E19CC06B /* Swipix/Views.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swipix/Views.swift; sourceTree = "<group>"; };
+		2AE6E7F7D4171A45DA1617BC /* Swipix/ImageCompressionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swipix/ImageCompressionService.swift; sourceTree = "<group>"; };
+		3685E330EC5277A9DD5661C6 /* Swipix/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Swipix/Assets.xcassets; sourceTree = "<group>"; };
+		3D26C239F1E25861753FF749 /* SwipixTests/SwipixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipixTests/SwipixTests.swift; sourceTree = "<group>"; };
+		5FBEA440C1010E9DBFE0FC70 /* Swipix/ReviewState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swipix/ReviewState.swift; sourceTree = "<group>"; };
+		85B31B4C728776FB86AD04A2 /* SwipixUITests/SwipixUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipixUITests/SwipixUITests.swift; sourceTree = "<group>"; };
+		91251B722F603F5400AD371C /* SwipixTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = SwipixTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		96ED5C5789B174A01557791C /* Swipix/PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Swipix/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		BC6AF1ED9096715E3E6B3F96 /* Swipix/PhotoLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swipix/PhotoLibraryService.swift; sourceTree = "<group>"; };
+		C5E87F721E3C0B6150A65092 /* Swipix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Swipix.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CB10CCF35CEC8BA2851FFDDB /* Swipix/FullscreenPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swipix/FullscreenPreview.swift; sourceTree = "<group>"; };
+		CD4D683A185ADCAA260A5753 /* SwipixUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = SwipixUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		05A219E03BBB2EF083AE1853 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		12384B5908BE5FE5B3301CEE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		99C7943D90D870A50ADE9160 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		64292B1C2B2E13EAD8788FC8 = {
+			isa = PBXGroup;
+			children = (
+				CB10CCF35CEC8BA2851FFDDB /* Swipix/FullscreenPreview.swift */,
+				268C7D0CD7711E6A9394E8A3 /* Swipix/AppModel.swift */,
+				5FBEA440C1010E9DBFE0FC70 /* Swipix/ReviewState.swift */,
+				BC6AF1ED9096715E3E6B3F96 /* Swipix/PhotoLibraryService.swift */,
+				1D579497BB144D00153D09BD /* Swipix/CompressionView.swift */,
+				29046B5F7AA439D7E19CC06B /* Swipix/Views.swift */,
+				2AE6E7F7D4171A45DA1617BC /* Swipix/ImageCompressionService.swift */,
+				3D26C239F1E25861753FF749 /* SwipixTests/SwipixTests.swift */,
+				85B31B4C728776FB86AD04A2 /* SwipixUITests/SwipixUITests.swift */,
+				3685E330EC5277A9DD5661C6 /* Swipix/Assets.xcassets */,
+				96ED5C5789B174A01557791C /* Swipix/PrivacyInfo.xcprivacy */,
+				FBDC4F23F93125BBEEAE800C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		FBDC4F23F93125BBEEAE800C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C5E87F721E3C0B6150A65092 /* Swipix.app */,
+				91251B722F603F5400AD371C /* SwipixTests.xctest */,
+				CD4D683A185ADCAA260A5753 /* SwipixUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		636117B25F17DA7E91194E09 /* SwipixUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2C89FC06BA9452D155609FB8 /* Build configuration list for PBXNativeTarget "SwipixUITests" */;
+			buildPhases = (
+				163D39D31938BBA478C0E98C /* Sources */,
+				05A219E03BBB2EF083AE1853 /* Frameworks */,
+				5EB9CCB577FB52F9372C4A07 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DE58E2B17C19600779694943 /* PBXTargetDependency */,
+			);
+			name = SwipixUITests;
+			productName = SwipixUITests;
+			productReference = CD4D683A185ADCAA260A5753 /* SwipixUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		7D1043473D55BFA90E8530D3 /* Swipix */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F37922C48DA5978D02C9E50E /* Build configuration list for PBXNativeTarget "Swipix" */;
+			buildPhases = (
+				2D764CD838DB39F040AA7EC4 /* Sources */,
+				12384B5908BE5FE5B3301CEE /* Frameworks */,
+				06F5DC629BD46AAFD46564D1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Swipix;
+			productName = Swipix;
+			productReference = C5E87F721E3C0B6150A65092 /* Swipix.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A94A8FE5CCB19BA61C4C0873 /* SwipixTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BECB265224D91761C05FDA33 /* Build configuration list for PBXNativeTarget "SwipixTests" */;
+			buildPhases = (
+				9F3002A5D69B22D357A58AA9 /* Sources */,
+				99C7943D90D870A50ADE9160 /* Frameworks */,
+				C584AE92222380FB29B6223F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DE58E2B17C19600779694943 /* PBXTargetDependency */,
+			);
+			name = SwipixTests;
+			productName = SwipixTests;
+			productReference = 91251B722F603F5400AD371C /* SwipixTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		98F54143AB4E86B28C3AFEE0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					7D1043473D55BFA90E8530D3 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					A94A8FE5CCB19BA61C4C0873 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 7D1043473D55BFA90E8530D3;
+					};
+				};
+			};
+			buildConfigurationList = 862894B703A6DEDF96A9DD6C /* Build configuration list for PBXProject "Swipix" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 64292B1C2B2E13EAD8788FC8;
+			productRefGroup = FBDC4F23F93125BBEEAE800C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7D1043473D55BFA90E8530D3 /* Swipix */,
+				A94A8FE5CCB19BA61C4C0873 /* SwipixTests */,
+				636117B25F17DA7E91194E09 /* SwipixUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		06F5DC629BD46AAFD46564D1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				04200CFFD12D083534B07BB1 /* Swipix/Assets.xcassets in Resources */,
+				07B760A8663938679E1BD8F1 /* Swipix/PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5EB9CCB577FB52F9372C4A07 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C584AE92222380FB29B6223F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		163D39D31938BBA478C0E98C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				46FDE337106B1340F3D3C10F /* SwipixUITests/SwipixUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2D764CD838DB39F040AA7EC4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F8DD70231A486AED154C9753 /* Swipix/FullscreenPreview.swift in Sources */,
+				B80C9F230E0AA501A53962FB /* Swipix/AppModel.swift in Sources */,
+				D88ED4A8C750CA8BAA2BC556 /* Swipix/ReviewState.swift in Sources */,
+				B91D0C269C8B9E98A0E319AF /* Swipix/PhotoLibraryService.swift in Sources */,
+				035830AC1BECCC96183385F9 /* Swipix/CompressionView.swift in Sources */,
+				7B90AD1659B558EEFBDE1732 /* Swipix/Views.swift in Sources */,
+				80450130C55606DA7620A088 /* Swipix/ImageCompressionService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F3002A5D69B22D357A58AA9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				702EE914005EB2ADB5D97C40 /* SwipixTests/SwipixTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DE58E2B17C19600779694943 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7D1043473D55BFA90E8530D3 /* Swipix */;
+			targetProxy = D799BAE6088A90139B415FCC /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		5A8C91857F674E16E2724F47 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = BR35Z44838;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Swipix saves compressed copies while keeping your originals.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Swipix shows your selected photos, saves compressed copies, and deletes only photos you explicitly confirm in the Bin.";
+				INFOPLIST_KEY_PHPhotoLibraryPreventAutomaticLimitedAccessAlert = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.swipics.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		89E1FD6268CC0F221A2BE178 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_TESTABILITY = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+			};
+			name = Debug;
+		};
+		942EEBBACD6C88CAE7F29B29 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.swipix.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Swipix.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Swipix";
+			};
+			name = Release;
+		};
+		94C1D7A82E2F92E70C5BA5D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.swipix.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = Swipix;
+			};
+			name = Debug;
+		};
+		9609A256A79253DD705A918E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.swipix.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = Swipix;
+			};
+			name = Release;
+		};
+		E6DE6C99132752C914FEF632 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_TESTABILITY = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = " $(inherited)";
+			};
+			name = Release;
+		};
+		E9B2E96ABC5F6856F2BE79CF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = BR35Z44838;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Swipix saves compressed copies while keeping your originals.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Swipix shows your selected photos, saves compressed copies, and deletes only photos you explicitly confirm in the Bin.";
+				INFOPLIST_KEY_PHPhotoLibraryPreventAutomaticLimitedAccessAlert = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.swipics.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		FCB48D8F88BCDB0ED9FADFD7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.swipix.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Swipix.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Swipix";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2C89FC06BA9452D155609FB8 /* Build configuration list for PBXNativeTarget "SwipixUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				94C1D7A82E2F92E70C5BA5D8 /* Debug */,
+				9609A256A79253DD705A918E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		862894B703A6DEDF96A9DD6C /* Build configuration list for PBXProject "Swipix" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				89E1FD6268CC0F221A2BE178 /* Debug */,
+				E6DE6C99132752C914FEF632 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BECB265224D91761C05FDA33 /* Build configuration list for PBXNativeTarget "SwipixTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FCB48D8F88BCDB0ED9FADFD7 /* Debug */,
+				942EEBBACD6C88CAE7F29B29 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F37922C48DA5978D02C9E50E /* Build configuration list for PBXNativeTarget "Swipix" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E9B2E96ABC5F6856F2BE79CF /* Debug */,
+				5A8C91857F674E16E2724F47 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+}
