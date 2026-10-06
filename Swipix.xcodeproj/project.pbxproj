@@ -18,6 +18,7 @@
 		B91D0C269C8B9E98A0E319AF /* Swipix/PhotoLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC6AF1ED9096715E3E6B3F96 /* Swipix/PhotoLibraryService.swift */; };
 		D88ED4A8C750CA8BAA2BC556 /* Swipix/ReviewState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FBEA440C1010E9DBFE0FC70 /* Swipix/ReviewState.swift */; };
 		F8DD70231A486AED154C9753 /* Swipix/FullscreenPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB10CCF35CEC8BA2851FFDDB /* Swipix/FullscreenPreview.swift */; };
+		5CD4D8EBD8E8C51CF22C97B0 /* Swipix/PhotoInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 647CAE3B043F8965B4EE8BDF /* Swipix/PhotoInfoView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,6 +46,7 @@
 		C5E87F721E3C0B6150A65092 /* Swipix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Swipix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB10CCF35CEC8BA2851FFDDB /* Swipix/FullscreenPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swipix/FullscreenPreview.swift; sourceTree = "<group>"; };
 		CD4D683A185ADCAA260A5753 /* SwipixUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = SwipixUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		647CAE3B043F8965B4EE8BDF /* Swipix/PhotoInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swipix/PhotoInfoView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +77,7 @@
 		64292B1C2B2E13EAD8788FC8 = {
 			isa = PBXGroup;
 			children = (
+				647CAE3B043F8965B4EE8BDF /* Swipix/PhotoInfoView.swift */,
 				CB10CCF35CEC8BA2851FFDDB /* Swipix/FullscreenPreview.swift */,
 				268C7D0CD7711E6A9394E8A3 /* Swipix/AppModel.swift */,
 				5FBEA440C1010E9DBFE0FC70 /* Swipix/ReviewState.swift */,
@@ -233,6 +236,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5CD4D8EBD8E8C51CF22C97B0 /* Swipix/PhotoInfoView.swift in Sources */,
 				F8DD70231A486AED154C9753 /* Swipix/FullscreenPreview.swift in Sources */,
 				B80C9F230E0AA501A53962FB /* Swipix/AppModel.swift in Sources */,
 				D88ED4A8C750CA8BAA2BC556 /* Swipix/ReviewState.swift in Sources */,

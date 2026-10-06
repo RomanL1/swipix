@@ -22,6 +22,9 @@ struct ReviewLedger: Sendable {
         decisions[id] = choice
         return true
     }
+    mutating func recordReplacement(original: String, compressed: String) {
+        decisions[original] = .bin; decisions[compressed] = .keep
+    }
     mutating func restore(_ ids: Set<String>) { ids.forEach { decisions.removeValue(forKey: $0) } }
     func next(in accessible: [String]) -> String? {
         if let currentID, accessible.contains(currentID), decisions[currentID] == nil { return currentID }
@@ -45,57 +48,144 @@ struct ReviewLedger: Sendable {
     init() { key = "main" }
 }
 
+/// Owns its context on a background executor; persistent models never cross actors.
+private actor ReviewPersistence {
+    private nonisolated let queue = DispatchSerialQueue(label: "com.swipix.review-persistence", qos: .userInitiated)
+    nonisolated var unownedExecutor: UnownedSerialExecutor { queue.asUnownedSerialExecutor() }
+    private let container: ModelContainer
+    private lazy var modelContext: ModelContext = {
+        assert(!Thread.isMainThread, "Create the review context off the UI thread")
+        let context = ModelContext(container)
+        context.autosaveEnabled = false
+        return context
+    }()
+    init(container: ModelContainer) { self.container = container }
+    private func record(_ id: String) throws -> ReviewRecord? {
+        var descriptor = FetchDescriptor<ReviewRecord>(predicate: #Predicate { $0.assetID == id })
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first
+    }
+    private func session() throws -> ReviewSession {
+        guard let session = try modelContext.fetch(FetchDescriptor<ReviewSession>()).first else {
+            throw PhotoFailure(message: "Review history is unavailable. Reopen Swipix before continuing.")
+        }
+        return session
+    }
+    private func save() throws {
+        assert(!Thread.isMainThread, "Review writes must stay off the UI thread")
+        modelContext.autosaveEnabled = false
+        do { try modelContext.save() }
+        catch { modelContext.rollback(); throw error }
+    }
+    func setCurrent(_ id: String?) throws {
+        let session = try session()
+        guard session.currentID != id else { return }
+        session.currentID = id
+        try save()
+    }
+    func decide(_ id: String, _ choice: ReviewChoice, currentID: String?) throws {
+        guard try record(id) == nil else { return }
+        let session = try session()
+        modelContext.insert(ReviewRecord(assetID: id, choice: choice))
+        session.currentID = currentID
+        try save()
+    }
+    func recordReplacement(original: String, compressed: String) throws {
+        let source = try record(original) ?? ReviewRecord(assetID: original, choice: .bin)
+        let replacement = try record(compressed) ?? ReviewRecord(assetID: compressed, choice: .keep)
+        if source.modelContext == nil { modelContext.insert(source) }
+        if replacement.modelContext == nil { modelContext.insert(replacement) }
+        source.choice = ReviewChoice.bin.rawValue; source.date = .now
+        replacement.choice = ReviewChoice.keep.rawValue
+        try save()
+    }
+    func restore(_ ids: Set<String>, currentID: String? = nil) throws {
+        let records = try ids.compactMap { try record($0) }
+        let session = try session()
+        records.forEach { modelContext.delete($0) }
+        if let currentID { session.currentID = currentID }
+        try save()
+    }
+}
+
 @MainActor @Observable final class ReviewStore {
-    private let context: ModelContext
-    private var records: [String: ReviewRecord] = [:]
-    private var session: ReviewSession
+    private let persistence: ReviewPersistence
+    // Serialize writes and their UI publication, including actions from different screens.
+    @ObservationIgnored private var pending: Task<Void, Never>?
     private(set) var ledger = ReviewLedger()
     private(set) var lastDecision: String?
-    var binIDs: [String] {
-        records.values.filter { $0.choice == ReviewChoice.bin.rawValue }
-            .sorted { $0.date > $1.date }.map(\.assetID)
-    }
-    var shuffleSeed: String { session.shuffleSeed }
+    let shuffleSeed: String
+    private(set) var binIDs: [String] = []
+    private(set) var decisionsRevision = 0
     var reviewedCount: Int { ledger.decisions.count }
 
     init(container: ModelContainer) throws {
-        context = ModelContext(container)
+        let context = ModelContext(container)
         context.autosaveEnabled = false
-        session = try context.fetch(FetchDescriptor<ReviewSession>()).first ?? ReviewSession()
+        let session = try context.fetch(FetchDescriptor<ReviewSession>()).first ?? ReviewSession()
         if session.modelContext == nil { context.insert(session) }
         if session.shuffleSeed.isEmpty { session.shuffleSeed = UUID().uuidString }
         try context.save()
-        for record in try context.fetch(FetchDescriptor<ReviewRecord>()) {
+        shuffleSeed = session.shuffleSeed
+        persistence = ReviewPersistence(container: container)
+        let records = try context.fetch(FetchDescriptor<ReviewRecord>())
+        binIDs = records.filter { $0.choice == ReviewChoice.bin.rawValue }.sorted { $0.date > $1.date }.map(\.assetID)
+        for record in records {
             guard let choice = ReviewChoice(rawValue: record.choice) else { continue }
-            records[record.assetID] = record
             ledger.decide(record.assetID, choice)
         }
         ledger.currentID = session.currentID
     }
-    func setCurrent(_ id: String?) throws {
-        guard session.currentID != id else { return }
-        session.currentID = id
-        do { try context.save(); ledger.currentID = id }
-        catch { context.rollback(); throw error }
+    private func enqueue(_ operation: @escaping @MainActor () async throws -> Void) async throws {
+        let previous = pending
+        let next = Task { await previous?.value; try await operation() }
+        pending = Task { _ = try? await next.value }
+        try await next.value
     }
-    func decide(_ id: String, _ choice: ReviewChoice) throws {
-        guard ledger.decisions[id] == nil else { return }
-        let record = ReviewRecord(assetID: id, choice: choice)
-        context.insert(record)
-        do { try context.save() }
-        catch { context.rollback(); throw error }
-        records[id] = record; ledger.decide(id, choice); lastDecision = id
+    func setCurrent(_ id: String?) async throws {
+        try await enqueue {
+            guard self.ledger.currentID != id else { return }
+            if let id, self.ledger.decisions[id] != nil { return }
+            try await self.persistence.setCurrent(id)
+            self.ledger.currentID = id
+        }
     }
-    func restore(_ ids: Set<String>) throws {
-        for id in ids { if let record = records[id] { context.delete(record) } }
-        do { try context.save() }
-        catch { context.rollback(); throw error }
-        ids.forEach { records.removeValue(forKey: $0) }
-        ledger.restore(ids)
-        if let lastDecision, ids.contains(lastDecision) { self.lastDecision = nil }
+    func decide(_ id: String, _ choice: ReviewChoice, currentID: String? = nil) async throws {
+        try await enqueue {
+            guard self.ledger.decisions[id] == nil else { return }
+            try await self.persistence.decide(id, choice, currentID: currentID)
+            if choice == .bin { self.binIDs.insert(id, at: 0) }
+            self.decisionsRevision += 1
+            self.ledger.decide(id, choice); self.ledger.currentID = currentID; self.lastDecision = id
+        }
     }
-    func undo() throws {
-        guard let id = lastDecision else { return }
-        try restore([id]); try setCurrent(id)
+    func recordReplacement(original: String, compressed: String) async throws {
+        try await enqueue {
+            guard original != compressed, !compressed.isEmpty else { throw PhotoFailure(message: "Photos returned an invalid replacement identifier. The original is unchanged.") }
+            try await self.persistence.recordReplacement(original: original, compressed: compressed)
+            self.binIDs.removeAll { $0 == original || $0 == compressed }
+            self.binIDs.insert(original, at: 0)
+            self.decisionsRevision += 1
+            self.ledger.recordReplacement(original: original, compressed: compressed)
+            self.lastDecision = nil
+        }
+    }
+    func restore(_ ids: Set<String>) async throws {
+        try await enqueue {
+            try await self.persistence.restore(ids)
+            self.binIDs.removeAll { ids.contains($0) }
+            self.decisionsRevision += 1
+            self.ledger.restore(ids)
+            if let lastDecision = self.lastDecision, ids.contains(lastDecision) { self.lastDecision = nil }
+        }
+    }
+    func undo() async throws {
+        try await enqueue {
+            guard let id = self.lastDecision else { return }
+            try await self.persistence.restore([id], currentID: id)
+            self.binIDs.removeAll { $0 == id }; self.ledger.restore([id])
+            self.decisionsRevision += 1
+            self.ledger.currentID = id; self.lastDecision = nil
+        }
     }
 }

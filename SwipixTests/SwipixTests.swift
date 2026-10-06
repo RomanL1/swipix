@@ -49,30 +49,78 @@ final class ReviewLedgerTests: XCTestCase {
         try ModelContainer(for: ReviewRecord.self, ReviewSession.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     }
-    func testPersistenceRecoveryBinRestoreAndDuplicate() throws {
+    func testPersistenceRecoveryBinRestoreAndDuplicate() async throws {
         let container = try container()
         let store = try ReviewStore(container: container)
         XCTAssertEqual(store.shuffleSeed, try ReviewStore(container: container).shuffleSeed)
-        try store.decide("a", .bin); try store.decide("a", .keep); try store.decide("b", .keep)
-        try store.setCurrent("stale")
+        try await store.decide("a", .bin); try await store.decide("a", .keep); try await store.decide("b", .keep)
+        try await store.setCurrent("stale")
         let recovered = try ReviewStore(container: container)
         XCTAssertEqual(recovered.binIDs, ["a"])
         XCTAssertEqual(recovered.reviewedCount, 2)
         XCTAssertEqual(recovered.ledger.next(in: ["b", "c"]), "c")
-        try recovered.restore(["a"])
+        try await recovered.restore(["a"])
         let reopened = try ReviewStore(container: container)
         XCTAssertTrue(reopened.binIDs.isEmpty)
         XCTAssertEqual(reopened.ledger.next(in: ["a", "b"]), "a")
     }
-    func testUndoReturnsToExactAsset() throws {
+    func testCompressedReplacementIsAtomicIdempotentAndRecoverable() async throws {
+        let container = try container()
+        let store = try ReviewStore(container: container)
+        try await store.decide("original", .keep)
+        try await store.recordReplacement(original: "original", compressed: "compressed")
+        try await store.recordReplacement(original: "original", compressed: "compressed")
+        let recovered = try ReviewStore(container: container)
+        XCTAssertEqual(recovered.binIDs, ["original"])
+        XCTAssertEqual(recovered.ledger.decisions["compressed"], .keep)
+        XCTAssertEqual(recovered.reviewedCount, 2)
+        XCTAssertNil(store.lastDecision)
+        try await recovered.restore(["original"])
+        XCTAssertNil(recovered.ledger.decisions["original"])
+        XCTAssertEqual(recovered.ledger.decisions["compressed"], .keep)
+    }
+    func testInvalidReplacementCannotBinTheOriginal() async throws {
         let store = try ReviewStore(container: container())
-        try store.decide("a", .keep); try store.setCurrent("b")
-        try store.undo()
+        try await store.decide("original", .keep)
+        do {
+            try await store.recordReplacement(original: "original", compressed: "original")
+            XCTFail("Invalid replacement must be rejected")
+        } catch { }
+        XCTAssertTrue(store.binIDs.isEmpty)
+        XCTAssertEqual(store.ledger.decisions["original"], .keep)
+    }
+    func testDecisionAndNextCursorPersistTogether() async throws {
+        let container = try container()
+        let store = try ReviewStore(container: container)
+        try await store.decide("a", .bin, currentID: "b")
+        let recovered = try ReviewStore(container: container)
+        XCTAssertEqual(recovered.ledger.decisions["a"], .bin)
+        XCTAssertEqual(recovered.ledger.currentID, "b")
+        // A stale reconciliation must not move the cursor back onto a reviewed photo.
+        try await store.setCurrent("a")
+        XCTAssertEqual(store.ledger.currentID, "b")
+    }
+    func testConcurrentAndCancelledWritesRemainDurable() async throws {
+        let container = try container()
+        let store = try ReviewStore(container: container)
+        let first = Task { try await store.decide("a", .bin) }
+        let second = Task { try await store.decide("b", .keep) }
+        first.cancel()
+        try await first.value; try await second.value
+        let recovered = try ReviewStore(container: container)
+        XCTAssertEqual(recovered.ledger.decisions, ["a": .bin, "b": .keep])
+        XCTAssertEqual(store.ledger.decisions, recovered.ledger.decisions)
+        XCTAssertEqual(store.binIDs, ["a"])
+    }
+    func testUndoReturnsToExactAsset() async throws {
+        let store = try ReviewStore(container: container())
+        try await store.decide("a", .keep); try await store.setCurrent("b")
+        try await store.undo()
         XCTAssertEqual(store.ledger.currentID, "a")
         XCTAssertNil(store.ledger.decisions["a"])
         XCTAssertNil(store.lastDecision)
     }
-    func testDiskStoreReopensWithDecisions() throws {
+    func testDiskStoreReopensWithDecisions() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -84,7 +132,7 @@ final class ReviewLedgerTests: XCTestCase {
             let container = try ModelContainer(for: schema, configurations: [config])
             let store = try ReviewStore(container: container)
             seed = store.shuffleSeed
-            try store.decide("persisted", .bin); try store.setCurrent("next")
+            try await store.decide("persisted", .bin); try await store.setCurrent("next")
         }
         let reopened = try ModelContainer(for: schema, configurations: [config])
         let store = try ReviewStore(container: reopened)
@@ -95,6 +143,54 @@ final class ReviewLedgerTests: XCTestCase {
 }
 
 final class CompressionTests: XCTestCase {
+    func testCompressionPresetValues() {
+        XCTAssertEqual(CompressionPreset.high.quality, 0.8)
+        XCTAssertEqual(CompressionPreset.medium.quality, 0.4)
+        XCTAssertEqual(CompressionPreset.low.quality, 0.6)
+        XCTAssertEqual(CompressionPreset.high.scale, 1)
+        XCTAssertEqual(CompressionPreset.medium.scale, 1)
+        XCTAssertEqual(CompressionPreset.low.scale, 2.0 / 3.0)
+        XCTAssertEqual(CompressionConfiguration(preset: .medium, format: .heic), .init(quality: 0.4, scale: 1, format: .heic))
+    }
+    func testLowPresetResizesJPEGAndHEICAndKeepsOrientationAndGPS() async throws {
+        for format in [CompressionFormat.jpeg, .heic] {
+            if format == .heic && !CompressionFormat.supportsHEIC { continue }
+            let (sourceURL, directory) = try fixture()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let original = try Data(contentsOf: sourceURL)
+            let result = try await ImageCompressionService().compress(sourceURL: sourceURL, outputDirectory: directory,
+                configuration: .init(preset: .low, format: format))
+            XCTAssertLessThanOrEqual(abs(result.width - 170), 1)
+            XCTAssertLessThanOrEqual(abs(result.height - 128), 1)
+            XCTAssertEqual(result.outputFormat, format == .heic ? UTType.heic.identifier : UTType.jpeg.identifier)
+            let image = CGImageSourceCreateWithURL(result.outputURL as CFURL, nil)!
+            let props = CGImageSourceCopyPropertiesAtIndex(image, 0, nil)! as NSDictionary
+            XCTAssertEqual((props[kCGImagePropertyOrientation] as? NSNumber)?.intValue, 6)
+            let exif = props[kCGImagePropertyExifDictionary] as! NSDictionary
+            XCTAssertEqual((exif[kCGImagePropertyExifPixelXDimension] as? NSNumber)?.intValue, result.width)
+            XCTAssertEqual((exif[kCGImagePropertyExifPixelYDimension] as? NSNumber)?.intValue, result.height)
+            let info = try PhotoFileInfo.read(url: result.outputURL)
+            XCTAssertEqual(info.originalLocation, "47.30000, 8.50000")
+            XCTAssertTrue(info.image.contains { $0.title == "Captured (EXIF)" && $0.value == "2026:10:03 12:34:56" })
+            XCTAssertEqual(result.metadata.intentionalChanges.count, 1)
+            XCTAssertFalse(result.metadata.differences.contains(String(kCGImagePropertyPixelWidth)))
+            XCTAssertEqual(try Data(contentsOf: sourceURL), original)
+        }
+    }
+    func testHighAndMediumSupportFullResolutionJPEGAndHEIC() async throws {
+        let formats: [CompressionFormat] = CompressionFormat.supportsHEIC ? [.jpeg, .heic] : [.jpeg]
+        for format in formats {
+            for preset in [CompressionPreset.high, .medium] {
+                let (sourceURL, directory) = try fixture()
+                defer { try? FileManager.default.removeItem(at: directory) }
+                let result = try await ImageCompressionService().compress(sourceURL: sourceURL, outputDirectory: directory,
+                    configuration: .init(preset: preset, format: format))
+                XCTAssertEqual(result.width, 256); XCTAssertEqual(result.height, 192)
+                XCTAssertEqual(result.outputFormat, format == .heic ? UTType.heic.identifier : UTType.jpeg.identifier)
+                XCTAssertTrue(result.metadata.intentionalChanges.isEmpty)
+            }
+        }
+    }
     func testConfigurationClampsInvalidValues() {
         XCTAssertEqual(CompressionConfiguration(quality: -.infinity).quality, 0.8)
         XCTAssertEqual(CompressionConfiguration(quality: .nan).quality, 0.8)
@@ -135,6 +231,17 @@ final class CompressionTests: XCTestCase {
         for _ in 0..<frames { CGImageDestinationAddImage(destination, image, properties as CFDictionary) }
         XCTAssertTrue(CGImageDestinationFinalize(destination))
         return (sourceURL, directory)
+    }
+    func testPhotoInformationReadsOriginalFileWithoutChangingIt() throws {
+        let (sourceURL, directory) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let before = try Data(contentsOf: sourceURL)
+        let info = try PhotoFileInfo.read(url: sourceURL)
+        XCTAssertEqual(info.bytes, Int64(before.count))
+        XCTAssertEqual(info.originalLocation, "47.30000, 8.50000")
+        XCTAssertEqual(info.captions.first?.value, "Metadata test")
+        XCTAssertTrue(info.image.contains { $0.title == "Captured (EXIF)" && $0.value == "2026:10:03 12:34:56" })
+        XCTAssertEqual(try Data(contentsOf: sourceURL), before)
     }
     func testJPEGCompressionPreservesDimensionsAndImportantMetadata() async throws {
         let (sourceURL, directory) = try fixture()
@@ -221,4 +328,40 @@ private func residentBytes() -> UInt64 {
         pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count) }
     }
     return status == KERN_SUCCESS ? info.resident_size : 0
+}
+
+final class PhotoInformationTests: XCTestCase {
+    func testCameraExposureAndGPSFormatting() {
+        let info = PhotoFileInfo.parse([
+            kCGImagePropertyTIFFDictionary as String: [kCGImagePropertyTIFFMake as String: "Fixture", kCGImagePropertyTIFFModel as String: "QA camera"],
+            kCGImagePropertyExifDictionary as String: [
+                kCGImagePropertyExifFNumber as String: 1.8,
+                kCGImagePropertyExifExposureTime as String: 0.004,
+                kCGImagePropertyExifISOSpeedRatings as String: [100],
+                kCGImagePropertyExifFocalLength as String: 24.0],
+            kCGImagePropertyGPSDictionary as String: [
+                kCGImagePropertyGPSLatitude as String: 47.3,
+                kCGImagePropertyGPSLatitudeRef as String: "S",
+                kCGImagePropertyGPSLongitude as String: 8.5,
+                kCGImagePropertyGPSLongitudeRef as String: "W"]
+        ], bytes: 12345)
+        let values = Dictionary(uniqueKeysWithValues: info.camera.map { ($0.title, $0.value) })
+        XCTAssertEqual(values["Camera"], "QA camera")
+        XCTAssertEqual(values["Aperture"], "ƒ/1.8")
+        XCTAssertEqual(values["Shutter speed"], "1/250 s")
+        XCTAssertEqual(values["ISO"], "100")
+        XCTAssertEqual(values["Focal length"], "24 mm")
+        XCTAssertEqual(info.originalLocation, "-47.30000, -8.50000")
+        XCTAssertEqual(info.bytes, 12345)
+    }
+    func testMissingMetadataIsNeverInvented() {
+        let info = PhotoFileInfo.parse([:], bytes: 10)
+        XCTAssertTrue(info.camera.isEmpty); XCTAssertTrue(info.image.isEmpty); XCTAssertTrue(info.captions.isEmpty)
+        XCTAssertNil(info.originalLocation)
+        for exposure in [Double.nan, .infinity, -1, 0, .leastNonzeroMagnitude] {
+            let unusual = PhotoFileInfo.parse([kCGImagePropertyExifDictionary as String: [kCGImagePropertyExifExposureTime as String: exposure]], bytes: 1)
+            if !exposure.isFinite || exposure <= 0 { XCTAssertTrue(unusual.camera.isEmpty) }
+            else { XCTAssertFalse(unusual.camera.first?.value.contains("inf") ?? true) }
+        }
+    }
 }

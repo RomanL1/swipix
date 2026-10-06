@@ -22,20 +22,21 @@ struct FullscreenPreview: View {
                     if let failure { Text(failure).foregroundStyle(.white).padding().background(.black.opacity(0.7)) }
                 }
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) { Button("Close") { dismiss() } }
+                    ToolbarItem(placement: .topBarLeading) { Button { dismiss() } label: { Image(systemName: "xmark") }
+                        .buttonStyle(PhotoActionStyle(compact: true)).buttonBorderShape(.circle).accessibilityLabel("Close") }.sharedBackgroundVisibility(.hidden)
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { showingInfo = true } label: { Image(systemName: "info") }
-                            .buttonBorderShape(.circle).accessibilityLabel("Photo information")
-                    }
+                            .buttonStyle(PhotoActionStyle(compact: true)).buttonBorderShape(.circle).accessibilityLabel("Photo information")
+                    }.sharedBackgroundVisibility(.hidden)
                     if asset.mediaSubtypes.contains(.photoLive) {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button(playing ? "Show still" : "Play Live Photo") { playing.toggle() }
-                                .disabled(livePhoto == nil)
-                        }
+                                .buttonStyle(PhotoActionStyle(color: playing ? nil : .blue)).disabled(livePhoto == nil)
+                        }.sharedBackgroundVisibility(.hidden)
                     }
                 }
                 .sheet(isPresented: $showingInfo) { PhotoInfoView(asset: asset, library: library) }
-                .buttonStyle(.bordered)
+                .buttonStyle(PhotoActionStyle())
                 .toolbarBackground(.black, for: .navigationBar).toolbarBackground(.visible, for: .navigationBar)
                 .tint(.white).preferredColorScheme(.dark)
                 .task {

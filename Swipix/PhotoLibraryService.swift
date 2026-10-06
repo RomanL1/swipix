@@ -43,15 +43,20 @@ private final class ImageRequest<Value: Sendable>: @unchecked Sendable {
 @MainActor @Observable final class PhotoLibraryService: NSObject, PHPhotoLibraryChangeObserver {
     private(set) var authorization = PHPhotoLibrary.authorizationStatus(for: .readWrite)
     private(set) var assets: [PHAsset] = []
+    private(set) var assetIDs: [String] = []
     private(set) var revision = 0
     private var observing = false
+    private var refreshRequest = 0
     private var byID: [String: PHAsset] = [:]
-    private let manager = PHCachingImageManager()
+    private nonisolated let manager = PHCachingImageManager()
+    private nonisolated let cacheQueue = DispatchSerialQueue(label: "com.swipix.preview-cache", qos: .userInitiated)
     private var cached: [PHAsset] = []
     private var cacheSize = CGSize.zero
     private var warmed: [String: UIImage] = [:]
     private var warming: [String: Task<UIImage, Error>] = [:]
-    private var previewOptions: PHImageRequestOptions {
+    private var originalSizes: [String: String] = [:]
+    private var downloadingOriginals: [String: Task<String, Never>] = [:]
+    private nonisolated var previewOptions: PHImageRequestOptions {
         let options = PHImageRequestOptions()
         options.deliveryMode = .highQualityFormat; options.resizeMode = .fast
         options.isNetworkAccessAllowed = true
@@ -64,40 +69,66 @@ private final class ImageRequest<Value: Sendable>: @unchecked Sendable {
     }
     isolated deinit { if observing { PHPhotoLibrary.shared().unregisterChangeObserver(self) } }
     nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
-        Task { @MainActor [weak self] in self?.refresh() }
+        Task { @MainActor [weak self] in await self?.refresh() }
     }
     func requestAccess() async {
         authorization = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-        refresh()
+        await refresh()
     }
-    func refresh() {
+    func refresh() async {
+        refreshRequest += 1
+        let request = refreshRequest
         authorization = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        manager.stopCachingImagesForAllAssets(); cached = []
-        warming.values.forEach { $0.cancel() }; warming = [:]; warmed = [:]
         guard hasAccess else {
             if observing { PHPhotoLibrary.shared().unregisterChangeObserver(self); observing = false }
-            assets = []; byID = [:]; revision += 1; return
+            cacheQueue.async { [manager] in manager.stopCachingImagesForAllAssets() }; cached = []
+            warming.values.forEach { $0.cancel() }; warming = [:]; warmed = [:]
+            downloadingOriginals.values.forEach { $0.cancel() }; downloadingOriginals = [:]; originalSizes = [:]
+            assets = []; assetIDs = []; byID = [:]; revision += 1; return
         }
         if !observing { PHPhotoLibrary.shared().register(self); observing = true }
-        let options = PHFetchOptions()
-        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        let result = PHAsset.fetchAssets(with: .image, options: options)
-        var fetched: [PHAsset] = []
-        result.enumerateObjects { asset, _, _ in fetched.append(asset) }
-        assets = fetched; byID = Dictionary(uniqueKeysWithValues: fetched.map { ($0.localIdentifier, $0) })
+        let previous = byID
+        let snapshot = await Task.detached(priority: .userInitiated) {
+            let options = PHFetchOptions()
+            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            let result = PHAsset.fetchAssets(with: .image, options: options)
+            var fetched: [PHAsset] = []
+            result.enumerateObjects { asset, _, _ in fetched.append(asset) }
+            let unchanged = Set(fetched.filter { asset in
+                guard let old = previous[asset.localIdentifier] else { return false }
+                return old.modificationDate == asset.modificationDate && old.pixelWidth == asset.pixelWidth && old.pixelHeight == asset.pixelHeight
+            }.map(\.localIdentifier))
+            let ids = fetched.map(\.localIdentifier)
+            return (fetched, Dictionary(uniqueKeysWithValues: zip(ids, fetched)), unchanged, ids)
+        }.value
+        guard request == refreshRequest, hasAccess else { return }
+        let unchanged = snapshot.2
+        let invalidated = cached.filter { !unchanged.contains($0.localIdentifier) }
+        updateCaching(stopping: invalidated, oldSize: cacheSize)
+        cached.removeAll { !unchanged.contains($0.localIdentifier) }
+        for id in Array(warming.keys) where !unchanged.contains(id) { warming.removeValue(forKey: id)?.cancel() }
+        for id in Array(downloadingOriginals.keys) where !unchanged.contains(id) { downloadingOriginals.removeValue(forKey: id)?.cancel() }
+        warmed = warmed.filter { unchanged.contains($0.key) }
+        originalSizes = originalSizes.filter { unchanged.contains($0.key) }
+        assets = snapshot.0; byID = snapshot.1; assetIDs = snapshot.3
         revision += 1
     }
     func asset(_ id: String) -> PHAsset? { byID[id] }
     func prefetch(_ upcoming: [PHAsset], size: CGSize) {
         let next = Array(upcoming.prefix(6))
-        guard cached.map(\.localIdentifier) != next.map(\.localIdentifier) || cacheSize != size else { return }
-        manager.stopCachingImages(for: cached, targetSize: cacheSize, contentMode: .aspectFit, options: previewOptions)
-        if cacheSize != size {
+        let sizeChanged = cacheSize != size
+        let ids = Set(next.map(\.localIdentifier))
+        let previousIDs = Set(cached.map(\.localIdentifier))
+        let removed = sizeChanged ? cached : cached.filter { !ids.contains($0.localIdentifier) }
+        let added = sizeChanged ? next : next.filter { !previousIDs.contains($0.localIdentifier) }
+        let oldSize = cacheSize
+        if sizeChanged {
             warming.values.forEach { $0.cancel() }; warming = [:]; warmed = [:]
         }
-        let ids = Set(next.map(\.localIdentifier))
         for id in Array(warming.keys) where !ids.contains(id) { warming.removeValue(forKey: id)?.cancel() }
         warmed = warmed.filter { ids.contains($0.key) }
+        for id in Array(downloadingOriginals.keys) where !ids.contains(id) { downloadingOriginals.removeValue(forKey: id)?.cancel() }
+        originalSizes = originalSizes.filter { ids.contains($0.key) }
         cached = next; cacheSize = size
         for asset in next where warmed[asset.localIdentifier] == nil && warming[asset.localIdentifier] == nil {
             let id = asset.localIdentifier
@@ -111,7 +142,16 @@ private final class ImageRequest<Value: Sendable>: @unchecked Sendable {
                 } catch { throw error }
             }
         }
-        manager.startCachingImages(for: next, targetSize: size, contentMode: .aspectFit, options: previewOptions)
+        updateCaching(stopping: removed, oldSize: oldSize, starting: added, size: size)
+        for asset in next { startOriginalDownload(asset) }
+    }
+    private nonisolated func updateCaching(stopping oldAssets: [PHAsset], oldSize: CGSize,
+                                           starting newAssets: [PHAsset] = [], size: CGSize = .zero) {
+        cacheQueue.async { [manager] in
+            let options = self.previewOptions
+            if !oldAssets.isEmpty { manager.stopCachingImages(for: oldAssets, targetSize: oldSize, contentMode: .aspectFit, options: options) }
+            if !newAssets.isEmpty { manager.startCachingImages(for: newAssets, targetSize: size, contentMode: .aspectFit, options: options) }
+        }
     }
     func cachedPreview(_ asset: PHAsset, size: CGSize? = nil) -> UIImage? {
         guard size == nil || size == cacheSize else { return nil }
@@ -128,18 +168,13 @@ private final class ImageRequest<Value: Sendable>: @unchecked Sendable {
         }
         return try await requestPreview(asset, size: size)
     }
-    func prepareNext(after id: String) async {
-        guard let index = cached.firstIndex(where: { $0.localIdentifier == id }), cached.indices.contains(index + 1) else { return }
-        // Keep the current card visible while an iCloud preview finishes downloading.
-        _ = try? await warming[cached[index + 1].localIdentifier]?.value
-    }
     func retryPreview(_ asset: PHAsset) {
         warming.removeValue(forKey: asset.localIdentifier)?.cancel()
         warmed.removeValue(forKey: asset.localIdentifier)
     }
-    private func requestPreview(_ asset: PHAsset, size: CGSize) async throws -> UIImage {
+    @concurrent private func requestPreview(_ asset: PHAsset, size: CGSize) async throws -> UIImage {
         let request = ImageRequest<UIImage>(manager: manager)
-        return try await withTaskCancellationHandler {
+        let image: UIImage = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 request.install(continuation)
                 let options = previewOptions
@@ -154,6 +189,10 @@ private final class ImageRequest<Value: Sendable>: @unchecked Sendable {
                 request.setID(id)
             }
         } onCancel: { request.cancel() }
+        try Task.checkCancellation()
+        let prepared = await image.byPreparingForDisplay() ?? image
+        try Task.checkCancellation()
+        return prepared
     }
     func livePreview(_ asset: PHAsset) async throws -> PHLivePhoto {
         let request = ImageRequest<PHLivePhoto>(manager: manager)
@@ -174,14 +213,36 @@ private final class ImageRequest<Value: Sendable>: @unchecked Sendable {
             }
         } onCancel: { request.cancel() }
     }
-    /// Public PhotoKit has no file-size property. Count local resource bytes without retaining them or downloading an original.
-    func localSize(_ asset: PHAsset) async -> String {
+    private func startOriginalDownload(_ asset: PHAsset) {
+        let id = asset.localIdentifier
+        guard originalSizes[id] == nil, downloadingOriginals[id] == nil else { return }
+        downloadingOriginals[id] = Task(priority: .utility) { [weak self] in
+            guard let self else { return "Original size unavailable" }
+            let size = await self.readOriginalSize(asset)
+            if !Task.isCancelled && self.cached.contains(where: { $0.localIdentifier == id }) {
+                // Cache successful sizes; an offline failure can be explicitly retried.
+                if !size.hasPrefix("Original size unavailable") { self.originalSizes[id] = size }
+            }
+            return size
+        }
+    }
+    func originalSize(_ asset: PHAsset) async -> String {
+        if let size = originalSizes[asset.localIdentifier] { return size }
+        startOriginalDownload(asset)
+        return await downloadingOriginals[asset.localIdentifier]?.value ?? "Original size unavailable"
+    }
+    func retryOriginalDownload(_ asset: PHAsset) {
+        downloadingOriginals.removeValue(forKey: asset.localIdentifier)?.cancel()
+        originalSizes.removeValue(forKey: asset.localIdentifier)
+    }
+    /// Stream originals (including Live Photo video) from iCloud without retaining their bytes.
+    @concurrent private func readOriginalSize(_ asset: PHAsset) async -> String {
         let resources = PHAssetResource.assetResources(for: asset).filter { $0.type == .photo || $0.type == .pairedVideo }
         guard !resources.isEmpty else { return "Original size unavailable" }
         var total: Int64 = 0
         for resource in resources {
             guard !Task.isCancelled else { return "Original size unavailable" }
-            let options = PHAssetResourceRequestOptions(); options.isNetworkAccessAllowed = false
+            let options = PHAssetResourceRequestOptions(); options.isNetworkAccessAllowed = true
             let counter = ResourceByteCounter()
             let success = await withTaskCancellationHandler {
                 await withCheckedContinuation { continuation in
@@ -191,7 +252,7 @@ private final class ImageRequest<Value: Sendable>: @unchecked Sendable {
                     counter.setID(id)
                 }
             } onCancel: { counter.cancel() }
-            guard success else { return "Original size unavailable · iCloud" }
+            guard success else { return "Original size unavailable · check iCloud connection" }
             total += counter.value
         }
         let formatted = ByteCountFormatter.string(fromByteCount: total, countStyle: .file)
@@ -203,13 +264,13 @@ private final class ImageRequest<Value: Sendable>: @unchecked Sendable {
         var resolved: Set<String> = []
         fetched.enumerateObjects { asset, _, _ in resolved.insert(asset.localIdentifier) }
         guard resolved == ids else {
-            refresh()
+            await refresh()
             throw PhotoFailure(message: "Some selected photos are no longer accessible. Refresh your Photos selection and try again. Nothing was deleted.")
         }
         try await PHPhotoLibrary.shared().performChanges { @Sendable in
             PHAssetChangeRequest.deleteAssets(fetched)
         }
-        refresh()
+        await refresh()
         let remaining = ids.filter { byID[$0] != nil }
         if !remaining.isEmpty { throw PhotoFailure(message: "Photos still reports \(remaining.count) selected items. They remain in the Bin; check Photos before retrying.") }
         return resolved
@@ -232,19 +293,37 @@ private final class ImageRequest<Value: Sendable>: @unchecked Sendable {
         try Task.checkCancellation()
         return resource.uniformTypeIdentifier
     }
-    func saveCopy(_ result: CompressionResult, from asset: PHAsset) async throws {
+    func saveCopy(_ result: CompressionResult, from asset: PHAsset) async throws -> String {
         guard hasAccess, self.asset(asset.localIdentifier) != nil else {
             throw PhotoFailure(message: "The source photo is no longer accessible. Restore Photos access before saving.")
         }
         let date = asset.creationDate, location = asset.location
+        let favorite = asset.isFavorite, hidden = asset.isHidden
+        var albums: [PHAssetCollection] = []
+        PHAssetCollection.fetchAssetCollectionsContaining(asset, with: .album, options: nil).enumerateObjects { album, _, _ in
+            if album.assetCollectionSubtype == .albumRegular && album.canPerform(.addContent) { albums.append(album) }
+        }
+        let destinationAlbums = albums
+        let created = CreatedAssetIdentifier()
         try await PHPhotoLibrary.shared().performChanges { @Sendable in
             let request = PHAssetCreationRequest.forAsset()
             request.creationDate = date; request.location = location
+            request.isFavorite = favorite; request.isHidden = hidden
             let options = PHAssetResourceCreationOptions()
             options.originalFilename = "Swipix-\(UUID().uuidString).\(result.fileExtension)"
             request.addResource(with: .photo, fileURL: result.outputURL, options: options)
+            if let placeholder = request.placeholderForCreatedAsset {
+                created.set(placeholder.localIdentifier)
+                for album in destinationAlbums {
+                    PHAssetCollectionChangeRequest(for: album)?.addAssets([placeholder] as NSArray)
+                }
+            }
         }
-        refresh()
+        await refresh()
+        guard let id = created.value else {
+            throw PhotoFailure(message: "Photos saved the compressed photo but did not return its identifier. The original has not been moved to the Bin; check Photos before retrying.")
+        }
+        return id
     }
 }
 
@@ -263,4 +342,11 @@ private final class ResourceByteCounter: @unchecked Sendable {
     }
     func add(_ bytes: Int) { lock.lock(); count += Int64(bytes); lock.unlock() }
     var value: Int64 { lock.lock(); defer { lock.unlock() }; return count }
+}
+
+private final class CreatedAssetIdentifier: @unchecked Sendable {
+    private let lock = NSLock()
+    private var identifier: String?
+    func set(_ id: String) { lock.lock(); identifier = id; lock.unlock() }
+    var value: String? { lock.lock(); defer { lock.unlock() }; return identifier }
 }
